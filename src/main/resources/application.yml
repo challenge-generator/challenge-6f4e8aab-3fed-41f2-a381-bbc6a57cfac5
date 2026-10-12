@@ -1,0 +1,76 @@
+spring:
+  application:
+    name: payments-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/payments_db
+    username: payments_user
+    password: payments_password
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          lob:
+            non_contextual_creation: true
+  mvc:
+    async:
+      request-timeout: 500
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api/payments
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 5
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 1s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+        recordExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+          - org.springframework.web.client.ResourceAccessException
+    instances:
+      antiFraudService:
+        baseConfig: default
+      bankingCoreService:
+        baseConfig: default
+  timelimiter:
+    configs:
+      default:
+        timeoutDuration: 500ms
+    instances:
+      antiFraudService:
+        baseConfig: default
+      bankingCoreService:
+        baseConfig: default
